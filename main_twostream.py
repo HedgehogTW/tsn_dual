@@ -264,24 +264,25 @@ def main():
 
     ################################ evaluate
     if args.evaluate:
-        path_checkpoint = pathlib.Path(args.resume )
+        path_checkpoint = pathlib.Path(args.resume)
         
-        chk_lst = sorted(path_checkpoint.glob('checkpoint_{}*.tar'.format(args.modality)))
+        chk_lst = sorted(path_checkpoint.glob('model_{}*.tar'.format(args.modality)))
         checkpoint_file = chk_lst[-1]
         print('checkpoint_file:', checkpoint_file)
         best_model_name = checkpoint_file
         if os.path.isfile(best_model_name):
-            print("==> loading checkpoint '{}'".format(best_model_name))
-            checkpoint = torch.load(best_model_name)
-            args.arch = checkpoint['arch']
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("==> loaded checkpoint '{}' (epoch {}) (best_prec1 {})"
-              .format(args.arch, args.start_epoch, best_prec1))
+            print("==> loading model '{}'".format(best_model_name))
+            model = torch.load(best_model_name)
+            # checkpoint = torch.load(best_model_name)
+            # args.arch = checkpoint['arch']
+            # args.start_epoch = checkpoint['epoch']
+            # best_prec1 = checkpoint['best_prec1']
+            # model.load_state_dict(checkpoint['state_dict'])
+            # optimizer.load_state_dict(checkpoint['optimizer'])
+            # print("==> loaded checkpoint '{}' (epoch {}) (best_prec1 {})"
+              # .format(args.arch, args.start_epoch, best_prec1))
         else:
-            print("==> no checkpoint found at '{}'".format(best_model_name)) 
+            print("==> no model found at '{}'".format(best_model_name)) 
 
         prec1, df = validate(test_loader, model, criterion)        
         print(classification_report(df['target'], df['pred']))
@@ -289,8 +290,8 @@ def main():
         print(conf_mx)
 
         dt = datetime.datetime.now().strftime("%m%d_%H%M")    
-        out_name = 'test_{}_{}_{}.csv'.format(args.arch, args.opti, dt)
-        df.to_csv(out_name,  sep = ',')
+        # out_name = 'test_{}_{}_{}.csv'.format(args.arch, args.opti, dt)
+        # df.to_csv(out_name,  sep = ',')
         print('acc: {:.4f}, out file: {}'.format(prec1, out_name))
         return
 
@@ -362,14 +363,17 @@ def main():
     f.close()
     print('Training history:', out_name)
 
-    checkpoint_name = "checkpoint_{}_{}_{}.pth.tar".format(args.arch, args.opti, dt)
-    save_checkpoint({
-        'epoch': epoch + 1,
-        'arch': args.arch,
-        'state_dict': model.state_dict(),
-        'best_prec1': best_prec1,
-        'optimizer' : optimizer.state_dict(),
-    }, False, checkpoint_name, args.resume)
+
+    model_name = "model_{}_{}_{}.pth.tar".format(args.arch, args.opti, dt)
+    model_path = os.path.join(args.resume, model_name)
+    torch.save(model, model_path)
+    # save_checkpoint({
+    #     'epoch': epoch + 1,
+    #     'arch': args.arch,
+    #     'state_dict': model.state_dict(),
+    #     'best_prec1': best_prec1,
+    #     'optimizer' : optimizer.state_dict(),
+    # }, False, checkpoint_name, args.resume)
 
 
 def build_model(rgb_channel, flow_channel, segments):
