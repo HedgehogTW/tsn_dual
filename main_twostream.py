@@ -448,10 +448,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
             if (i+1) % args.print_freq == 0:
 
                 print('Epoch: [{0}][{1}/{2}]\t'
-                      # 'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                      'Time {batch_time.avg:.3f}\t'
                       'Loss {loss.avg:.4f}\t'
                       'acc_f {top1_f.avg:.3f} acc_a {top1_a.avg:.3f} {top1_final.avg:.3f}'.format(
-                       epoch+1, i+1, len(train_loader)+1, loss=losses, 
+                       epoch+1, i+1, len(train_loader)+1, batch_time=batch_time, loss=losses, 
                        top1_f=top1_f, top1_a=top1_a, top1_final=top1_final))
 
     return top1_final.avg
@@ -513,12 +513,12 @@ def validate(val_loader, model, criterion):
 
         if i % args.print_freq == 0:
             print('---Test: [{0}/{1}]\t'
-                  # 'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Time {batch_time.avg:.3f}\t'
                   'Loss {loss.avg:.4f}\t'
                   'acc_f {top1_f.avg:.3f} acc_a {top1_a.avg:.3f} {top1_final.avg:.3f}'.format(
                   # 'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
                   # 'Prec@3 {top3.val:.3f} ({top3.avg:.3f})'.format(
-                   i, len(val_loader),  loss=losses,
+                   i, len(val_loader), batch_time=batch_time, loss=losses,
                    top1_f=top1_f, top1_a=top1_a, top1_final=top1_final))
 
     print(' * Val Acc@1 {top1.avg:.3f} '.format(top1=top1_final))
