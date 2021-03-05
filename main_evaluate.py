@@ -97,6 +97,8 @@ best_prec1 = 0
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
+
+
 def main():
     global args, best_prec1
     args = parser.parse_args()
@@ -160,15 +162,61 @@ def main():
 
     # data loading, train_rgb, train_flow 內容一樣
 
-    test_setting_file = "test_split%d.txt" % (args.split)
-    test_split_file = os.path.join(args.data, args.dataset, test_setting_file)
 
-    if not os.path.exists(test_split_file): 
-        print('no test file ', test_split_file)
 
+    ################################ evaluate
+    path_checkpoint = pathlib.Path(args.resume )
+    model, model_name = load_model(path_checkpoint)    
+    if not model:
+        return
+
+    path_test = pathlib.Path(args.data, 'rat_two')
+    test_files = sorted(path_test.glob('test_rat_*.txt'))
+
+    opti = model_name.stem.split('_')[3]
+    dt = datetime.datetime.now().strftime("%m%d_%H%M")   
+
+    df_all = pd.DataFrame()
+    for f in test_files:
+        test_loader = prepare_data_loader(f, rgb_is_color, flow_is_color, 
+            rgb_length, flow_length, val_transform)
+        if not test_loader:
+            return
+
+        prec1, df = validate(test_loader, model, criterion)        
+        print(classification_report(df['target'], df['pred']))
+        conf_mx = confusion_matrix(df['target'], df['pred'])
+        print(conf_mx)
+
+        rat = f.stem.rsplit('_',1)[1]
+        df_all.insert(len(df_all.columns), rat+'_target', df['target'])
+        df_all.insert(len(df_all.columns), rat+'_pred', df['pred'])
+
+
+ 
+        # out_name = '{}_{}_{}_{}.csv'.format(f.stem, args.arch, opti, dt)
+        # df.to_csv(out_name,  sep = ',')
+        print('>>>>>>>>>>> acc: {:.4f}, rat: {}'.format(prec1, rat))
+        print('-----'*10)
+
+    out_name = 'test_all_{}_{}_{}.csv'.format(args.arch, opti, dt)
+
+    df_all.to_csv(out_name,  sep = ',')
+    print('output ', out_name)
+    print('-----'*10)
+    return
+
+
+def prepare_data_loader(test_file, rgb_is_color, flow_is_color, 
+            rgb_length, flow_length, val_transform):
+    # test_split_file = os.path.join(args.data, args.dataset, test_file)
+
+    if not os.path.exists(test_file): 
+        print('no test file ', test_file)
+        return None
 
     test_dataset = datasets.__dict__[args.dataset](root=args.data,
-                                                  source=test_split_file,
+                                                  source=test_file,
                                                   phase="val",
                                                   modality=args.modality,
                                                   is_color=(rgb_is_color, flow_is_color),
@@ -178,39 +226,28 @@ def main():
                                                   new_height=args.new_height,
                                                   video_transform=val_transform)
 
-    print('{} test samples found in {}'.format(len(test_dataset), test_split_file))
+    print('{} test samples found in {}'.format(len(test_dataset), test_file))
 
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
-    ################################ evaluate
-    path_checkpoint = pathlib.Path(args.resume )
-        
+    return test_loader
+
+def load_model(path_checkpoint):
     chk_lst = sorted(path_checkpoint.glob('model_{}*.tar'.format(args.arch)))
     model_name = chk_lst[-1]
     print('model_name :', model_name )
 
+    model = None
     if os.path.isfile(model_name):
         print("==> loading model '{}'".format(model_name))
         model = torch.load(model_name)
     else:
         print("==> no model found at '{}'".format(model_name)) 
 
-    prec1, df = validate(test_loader, model, criterion)        
-    print(classification_report(df['target'], df['pred']))
-    conf_mx = confusion_matrix(df['target'], df['pred'])
-    print(conf_mx)
-
-    opti = model_name.stem.split('_')[3]
-    dt = datetime.datetime.now().strftime("%m%d_%H%M")    
-    out_name = 'test_{}_{}_{}.csv'.format(args.arch, opti, dt)
-    df.to_csv(out_name,  sep = ',')
-    print('acc: {:.4f}, out file: {}'.format(prec1, out_name))
-    return
-
-
+    return model, model_name
 
 def validate(val_loader, model, criterion):
     batch_time = AverageMeter()

@@ -66,8 +66,9 @@ for rat in rat_lst:
         break   
   
 
-    grooming_train_lst = [str(x) for x in path_frames.iterdir() if x.is_dir() and x.name[0]=='G' ]
-    non_grooming_train_lst = [str(x) for x in path_frames.iterdir() if x.is_dir() and x.name[0]=='N' ]
+    grooming_train_lst = ['/'.join(x.parts[2:]) for x in path_frames.iterdir() if x.is_dir() and x.name[0]=='G' ]
+    non_grooming_train_lst = ['/'.join(x.parts[2:]) for x in path_frames.iterdir() if x.is_dir() and x.name[0]=='N' ]
+
     
     print('grooming_train_lst', len(grooming_train_lst))
     print('non_grooming_train_lst', len(non_grooming_train_lst))
@@ -97,21 +98,20 @@ for rat in rat_lst:
     df_test = df.reset_index(drop=True)
     frame_count_lst = []
     for row in df_test.itertuples():
-        path_folder = pathlib.Path(row.x)
-        img_lst = list(path_folder.glob('img*.jpg'))
-        frame_count_lst.append(len(img_lst))
+        count = row.x.rsplit('_', 1)[-1]
+        frame_count_lst.append(count)
 
     ss = pd.Series(frame_count_lst)    
     df_test.insert(1, 'count', ss)
     print('df_test')
     print(df_test)
 
-    path_tsn_data = path_tsn.joinpath('rat')
+    path_tsn_data = path_tsn.joinpath('rat_two')
     if not path_tsn_data.exists():
         path_tsn_data.mkdir() 
 
-    fname = path_tsn_data.joinpath('test_flow_{}.txt'.format(rat))
+    fname = path_tsn_data.joinpath('test_rat_{}.txt'.format(rat))
     df_test.to_csv(fname, header=False, index = False, sep = ' ')
-    fname = path_tsn_data.joinpath('test_rgb_{}.txt'.format(rat))
-    df_test.to_csv(fname, header=False, index = False, sep = ' ')
+    print('output ', fname)
+ 
 
